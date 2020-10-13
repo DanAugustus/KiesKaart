@@ -1,23 +1,22 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[27]:
+# In[49]:
 
 
 import numpy as np
 import pandas as pd
+import CBSparserOData4
 import re
 
 
-# In[42]:
+# In[50]:
 
 
 def laad_uitslagenPC6(path):
     uitslagen = pd.read_csv(path,sep="|")
     uitslagen['PC6'] = uitslagen['postcode']
     uitslagen['PC4'] = uitslagen['postcode'].str[0:4]
-    # Dit moet een numerieke kolom worden.
-    
     uitslagen.drop(['postcode','huisnummertoevoeging','letter'], inplace = True, axis=1)
     register = uitslagen[['stad','straatnaam','stembureau','postcode_stembureau','PC6','PC4']]
     
@@ -34,7 +33,7 @@ def laad_uitslagenPC6(path):
     return uitslagen, register
 
 
-# In[43]:
+# In[51]:
 
 
 def laad_CBSdataPC6(path):
@@ -45,18 +44,69 @@ def laad_CBSdataPC6(path):
     
 
 
-# In[54]:
+# Normaliseer met aantal inwoners: MAN, VROUW, INW_xxx, UITKMINAOW,
+# Normaliseer met aantal huishoudens: WON_MRGEZ, 
+# Laat weg: INWONER, AANTAL_HH, Perc_NW_migracht. Deze laatse kolom bevat veel missende waarden.
+
+# In[53]:
 
 
 def join_PC6(uitslagen,demo):
     # Omdat de data per PC6 is gemeten is het logisch om eerst met de PC6 de databases te koppelen.
-    
     return uitslagen.join(demo)
 
 
-# In[45]:
 
 
-def normaliseer_PC6(df, feature_selectie=None):
+# SUGGESTIE: Deel percentages door 100
+
+def normaliseer_PC6(df, features=None, dropNA=True):
+    # verwijder ook NaN's
+    INW = []
+    perc = ['stemperc']
+    huish = ['WON_MRGEZ']
+    overig_persoon = ['MAN','VROUW','UITKMINAOW']
+    overig_normaal = ['GEM_HH_GR']
+    for col in df.columns:
+        if col in overig_persoon or re.search('^INW_',col):
+            df[col] = df[col] / df['INWONER']
+            INW.append(col)
+        elif col in huish:
+            df[col] = df[col] / df['AANTAL_HH']
+        elif col == 'Perc_NW_migracht':
+            df.drop(col, axis=1,inplace=True)
+        elif re.search('percentage$',col):
+            perc.append(col)
     
-    pass
+    if features:
+        cols = INW+overig_normaal+huish+perc
+        print(cols)
+        df = df[cols]
+    if dropNA:
+        df = df.dropna(axis=0)
+    
+    return df
+
+
+
+def prefixer(s, prefix, lengte):
+    s = str(s)
+    while len(s) < lengte:
+        s = '0' + s
+    s = prefix + s
+    return s
+
+def get_index():
+    index = index.groupby('PC6').median()
+    index['Buurt2019'] = index['Buurt2019'].astype('int').apply(lambda s: prefixer(s,'BU', 8))
+    index['Wijk2019'] = index['Wijk2019'].astype('int').apply(lambda s: prefixer(s, 'WK', 6))
+    index['Gemeente2019'] = index['Gemeente2019'].astype('int').apply(lambda s: prefixer(s, 'GM', 4))
+    return index 
+
+def get_prioriteit(df):
+    if 'prioriteit' in df.columns:
+        if 'PC6' in df.columns:
+            return(df[['PC6','prioriteit']])
+        else:
+            return df.prioriteit
+
