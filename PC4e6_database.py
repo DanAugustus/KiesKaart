@@ -61,19 +61,35 @@ def join_PC6(uitslagen,demo):
 # SUGGESTIE: Deel percentages door 100
 
 def normaliseer_PC6(df, features=None, dropNA=True):
-    # verwijder ook NaN's
-    INW = []
-    perc = ['stemperc']
+    # verwijder ook NaN's ?
+    
+    # Lijsten van alle mogelijke features, opgedeeld in hoe ze verwerkt moeten worden
+    INW = [] # Wordt gevuld met inwoners in leeftijdsgroep en features in overig_persoon
+    perc = ['stemperc'] # Opkomst en percentages stemmen worden altijd toegevoegd.
     huish = ['WON_MRGEZ']
     overig_persoon = ['MAN','VROUW','UITKMINAOW']
-    overig_normaal = ['GEM_HH_GR']
+    overig_normaal = ['GEM_HH_GR'] # Features die al genormaliseerd zijn.
+    zwarte_lijst = ['Perc_NW_migracht'] # Teveel missende waarden in deze kolom
+    
+    # verwijder kolommen 
+    def overbodig(lijst, checklist):
+        for c in lijst:
+            if c not in checklist:
+                lijst.remove(c)
+        return lijst
+    
+    if features:
+        huish = overbodig(huish, features)
+        overig_persoon = overbodig(overig_persoon, features)
+        overig_normaal = overbodig(overig_normaal, features)
+        
     for col in df.columns:
         if col in overig_persoon or re.search('^INW_',col):
             df[col] = df[col] / df['INWONER']
             INW.append(col)
         elif col in huish:
             df[col] = df[col] / df['AANTAL_HH']
-        elif col == 'Perc_NW_migracht':
+        elif col in zwarte_lijst:
             df.drop(col, axis=1,inplace=True)
         elif re.search('percentage$',col):
             perc.append(col)
@@ -82,6 +98,7 @@ def normaliseer_PC6(df, features=None, dropNA=True):
         cols = INW+overig_normaal+huish+perc
         print(cols)
         df = df[cols]
+        
     if dropNA:
         df = df.dropna(axis=0)
     
