@@ -57,10 +57,7 @@ def join_PC6(uitslagen,demo):
 
 
 
-
-# SUGGESTIE: Deel percentages door 100
-
-def normaliseer_PC6(df, features=None, dropNA=True):
+def normaliseer_PC6(df, features=None, dropNA=True, drempel = None):
     # verwijder ook NaN's ?
     
     # Lijsten van alle mogelijke features, opgedeeld in hoe ze verwerkt moeten worden
@@ -83,6 +80,10 @@ def normaliseer_PC6(df, features=None, dropNA=True):
         overig_persoon = overbodig(overig_persoon, features)
         overig_normaal = overbodig(overig_normaal, features)
         
+    if drempel:
+        stuk = df[df['INWONER'] >= drempel]
+        df = df.loc[ stuk.index ]
+        
     for col in df.columns:
         if col in overig_persoon or re.search('^INW_',col):
             df[col] = df[col] / df['INWONER']
@@ -93,7 +94,7 @@ def normaliseer_PC6(df, features=None, dropNA=True):
             df.drop(col, axis=1,inplace=True)
         elif re.search('percentage$',col):
             perc.append(col)
-    
+            
     if features:
         cols = INW+overig_normaal+huish+perc
         print(cols)
