@@ -64,7 +64,7 @@ def get_top_observations(table_url, url_filter = "", skip=None):
         side = "?$top=9999 &amp;"
     
     if url_filter == "":
-        target_url = table_url + "/TypedDataSet?" + side 
+        target_url = table_url + "/TypedDataSet" + side 
     elif "$filter=" in url_filter:
         target_url = table_url + "/TypedDataSet" + side + url_filter
     else:
@@ -111,7 +111,7 @@ def splits_cijfer(Identifier):
     return cijfer
         
 
-def get_observations(database, filtersoort=0, plaatsen = None, custom_filter="", features = None):
+def get_observations(database, filtersoort=0, plaatsen = None, custom_filter="", features = None, beta=True):
     
     """
     Haal de tabel met metingen op. In tegenstelling tot Odata4 hoeft de tabel niet geformatteerd te worden.
@@ -157,10 +157,18 @@ def get_observations(database, filtersoort=0, plaatsen = None, custom_filter="",
         print("Download geslaagd!")
         observations = pd.concat(frames,axis=0)       
     
+        if beta:
+            observations[filterkolom] = observations[filterkolom].str.strip()
+            frames = []
+            for plaats in plaatsen:
+                print(observations[filterkolom].head())
+                frames.append( observations[observations[filterkolom] == plaats] )
+            observations = pd.concat(frames,axis=0)
+                
     else:
         observations = get_top_observations(table_url+custom_filter)
         # Resultaten die niet meer in 9999 rijen passen worden weggelaten! Maar dit voorkomt foutmeldingen.
-        
+        # Gebruik daarom een filter
     cols = pd.Series(observations.columns)
     Volgorde = cols.apply(lambda s: splits_cijfer(s))
     sorteer = pd.DataFrame({'Identifier':cols, 'Volgorde':Volgorde})
